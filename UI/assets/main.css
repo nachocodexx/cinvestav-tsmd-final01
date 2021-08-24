@@ -26,7 +26,7 @@
 }
 
 
-#volume,#density {
+#volume,#density,#production,#consumer_others {
     padding: 10px 15px;
 }
 #graph{
