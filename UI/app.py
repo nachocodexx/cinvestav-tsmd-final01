@@ -17,6 +17,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 # ________________________________________________
 
 models = os.listdir(models_base_path)
+print(models)
 MODELS = {}
 for model in models:
     modelName = model.split(".")[0]
@@ -29,13 +30,17 @@ for model in models:
 
 
 def getData(**kwargs):
-    x = kwargs.get("x", np.array([[0, 0]]))
+    x = kwargs.get("x", np.array([[0, 0, 0, 0]]))
+    x = pd.DataFrame(
+        x, columns=["USER_VOLUME", "USER_DENSITY", "PRODUCTION", "CONSUME_OTHERS"])
     # print(x)
     test_df = pd.DataFrame()
+    classes = ['Alpha', 'Beta', 'Gamma']
     for i, pipeline in MODELS.items():
-        classes = pipeline.classes_
+        # print(pipeline.na )
         modelName = ["{}".format(i)] * len(classes)
         proba = pipeline.predict_proba(x)[0]
+        print(proba)
         tmp_df = pd.DataFrame(
             {
                 "MODEL_NAME": modelName,
@@ -46,21 +51,6 @@ def getData(**kwargs):
         test_df = pd.concat([tmp_df, test_df])
     return test_df
 # __________________________________________________
-# model0 = ["MODEL-0", "MODEL-0", "MODEL-0"]
-# model0_proba = [0, .4, .6]
-# model0_pred = ["GAMMA", "BETA", "ALPHA"]
-# #
-# model1 = ["MODEL-1", "MODEL-1", "MODEL-1"]
-# model1_proba = [.2, .1, .7]
-# model1_pred = ["GAMMA", "BETA", "ALPHA"]
-# dff = pd.DataFrame({
-#     "MODEL_NAME": model0 + model1,
-#     "PROBABILITY": model0_proba + model1_proba,
-#     "PREDICTION": model0_pred + model1_pred
-# })
-
-# fig = px.bar(dff, x="MODEL_NAME", y="PROBABILITY",
-#              color="PREDICTION", barmode="group")
 
 
 app.layout = html.Div([
@@ -79,6 +69,14 @@ app.layout = html.Div([
                 html.Div([
                     "USER_DENSITY: ",
                     dcc.Input(id="density", value="100", type="number")
+                ]),
+                html.Div([
+                    "PRODUCTION: ",
+                    dcc.Input(id="production", value="100", type="number")
+                ]),
+                html.Div([
+                    "CONSUME_OTHERS: ",
+                    dcc.Input(id="consumer_others", value="100", type="number")
                 ])
             ])
         ]
@@ -92,21 +90,26 @@ app.layout = html.Div([
 @app.callback(
     Output(component_id="graph", component_property="figure"),
     Input(component_id="volume", component_property="value"),
-    Input(component_id="density", component_property="value")
+    Input(component_id="density", component_property="value"),
+    Input(component_id="production", component_property="value"),
+    Input(component_id="consumer_others", component_property="value")
 )
-def update_out_div(value, value1):
-    x = np.array([[float(value), float(value1)]])
+def update_out_div(v0, v1, v2, v3):
+    x = np.array([[float(v0), float(v1), float(v2), float(v3)]])
     df = getData(x=x)
+    print(df)
+    # df = pd.DataFrame({"MODEL_NAME": ["LOG"], "PROBABILITY": [1]})
+    fig = px.bar(df, x="MODEL_NAME", y="PROBABILITY",
+                 color="PREDICTION",
+                 barmode="group"
+                 )
+    return fig
+
     # prediction = model.predict_proba(x)
     # prediction = prediction[0]
     # print(prediction)
     # df = pd.DataFrame(
     #     {"USER_ROLE": ["GAMMA", "BETA", "ALPHA"], "PROBABILITY": prediction})
     # fig = px.bar(df, x="USER_ROLE", y="PROBABILITY")
-    fig = px.bar(df, x="MODEL_NAME", y="PROBABILITY",
-                 color="PREDICTION", barmode="group")
-    return fig
-
-
 if __name__ == '__main__':
     app.run_server(host="0.0.0.0", port=5000, debug=True)
